@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rața de Aur</title>
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0d6b57">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rața de Aur">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: o singură coloană îngustă, ca o aplicație de telefon; sus cifra zilei, jos meniul cu file */
+  --bg:#f3f5f4;
+  --surface:#ffffff;
+  --ink:#16231f;
+  --muted:#5d6b66;
+  --line:#dde3e0;
+  --accent:#0d6b57;
+  --accent-soft:#e1f1ec;
+  --good:#1f7a3a;
+  --warn:#b26a00;
+  --warn-soft:#fff2dc;
+  --crit:#b3261e;
+  --crit-soft:#fde8e6;
+  --font-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1513; --surface:#18201d; --ink:#e7eeeb; --muted:#9aa9a3; --line:#2a3531;
+    --accent:#4fc3a1; --accent-soft:#16332b; --good:#5cc97a; --warn:#f0a93a; --warn-soft:#3a2c12;
+    --crit:#ff7b72; --crit-soft:#3d1b19; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1513; --surface:#18201d; --ink:#e7eeeb; --muted:#9aa9a3; --line:#2a3531;
+  --accent:#4fc3a1; --accent-soft:#16332b; --good:#5cc97a; --warn:#f0a93a; --warn-soft:#3a2c12;
+  --crit:#ff7b72; --crit-soft:#3d1b19; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.app{max-width:480px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding:0 16px 96px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(16px + env(safe-area-inset-top)) 0 8px}
+.brand{font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-.01em}
+.brand small{display:block;font-family:var(--font-body);font-weight:400;font-size:12px;color:var(--muted);letter-spacing:0}
+.brandwrap{display:flex;align-items:center;gap:10px}
+.logo{width:44px;height:44px;border-radius:12px;object-fit:cover;flex:none}
+.sync{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.sync.local{background:var(--warn-soft);color:var(--warn)}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
+h2{font-size:18px;font-weight:700}
+.num{font-variant-numeric:tabular-nums}
+.stack{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.hero{background:var(--accent);color:#fff;border:none}
+:root[data-theme="dark"] .hero{color:#0b1a15}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .hero{color:#0b1a15}}
+.hero .label{font-size:14px;opacity:.85}
+.hero .big{font-family:var(--font-display);font-weight:700;font-size:48px;line-height:1.05;letter-spacing:-.02em}
+.hero .sub{font-size:14px;opacity:.9}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.hero .bar{background:rgba(255,255,255,.3)}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.hero .bar>i{background:currentColor}
+.bar.warn>i{background:var(--warn)} .bar.crit>i{background:var(--crit)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.muted{color:var(--muted);font-size:14px}
+.pill{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.pill.good{background:var(--accent-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)}
+.banner{border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;background:var(--warn-soft);color:var(--ink);border:1px solid var(--line)}
+.banner.good{background:var(--accent-soft)}
+label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+textarea{min-height:120px;font-size:13px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.amount{font-family:var(--font-display);font-size:28px;font-weight:700;padding:8px 12px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px 14px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+:root[data-theme="dark"] button.primary{color:#0b1a15}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button.primary{color:#0b1a15}}
+button.ghost{background:transparent;border-color:transparent;color:var(--accent);padding:6px 8px}
+button.small{padding:6px 10px;font-size:14px}
+button.danger{color:var(--crit)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:7px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .chip[aria-pressed="true"]{color:#0b1a15}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip[aria-pressed="true"]{color:#0b1a15}}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.check{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--ink);flex-direction:row}
+.check input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+.list{display:flex;flex-direction:column}
+.item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:none}
+.item .what{display:flex;flex-direction:column;min-width:0}
+.item .what span:last-child{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.day{font-size:13px;font-weight:600;color:var(--muted);padding-top:12px}
+.edit-row{display:grid;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.edit-row:first-of-type{border-top:none}
+.edit-row .cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+nav .in{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+nav button{border:none;background:transparent;font-size:12px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px}
+nav button svg{width:22px;height:22px}
+nav button[aria-current="page"]{color:var(--accent);font-weight:600}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:12px;font-size:14px;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px);z-index:5}
+.toast button{background:transparent;border:none;color:inherit;text-decoration:underline;padding:0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-top:1px solid var(--line)}
+th{color:var(--muted);font-weight:500;border-top:none}
+td.r,th.r{text-align:right}
+.hidden{display:none}
+@media (prefers-reduced-motion: no-preference){.bar>i{transition:width .3s ease}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brandwrap"><img class="logo" src="data:image/jpeg;base64,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" alt="Sigla Rața de Aur" width="44" height="44"><div class="brand">Rața de Aur<small>Fiecare rată, la locul ei.</small></div></div>
+    <span id="sync" class="sync local">Se încarcă…</span>
+  </header>
+  <main id="view" class="stack" aria-live="polite"></main>
+</div>
+<nav aria-label="Meniu">
+  <div class="in">
+    <button data-tab="azi" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Azi</button>
+    <button data-tab="istoric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Istoric</button>
+    <button data-tab="economii"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18V9l8-5 8 5v9"/><path d="M9 18v-5h6v5"/></svg>Economii</button>
+    <button data-tab="credit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg>Credit</button>
+    <button data-tab="setari"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>Setări</button>
+  </div>
+</nav>
+<div id="toast" class="toast hidden" role="status"></div>
+
+<script id="core">
+/* ---------- Logica de calcul (fără DOM) ---------- */
+const pad = n => String(n).padStart(2, "0");
+const ymd = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
+const parseD = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const fmtD = dt => ymd(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+const addDays = (s, n) => { const d = parseD(s); d.setDate(d.getDate() + n); return fmtD(d); };
+const diffDays = (a, b) => Math.round((parseD(b) - parseD(a)) / 86400000);
+const dim = (y, m) => new Date(y, m, 0).getDate();
+const monthKey = s => "m_" + s.slice(0, 7);
+
+/* Perioadele încep în zilele în care intră banii. Returnează perioada care conține data `day`. */
+function periodAt(day, incomes) {
+  const valid = (incomes || []).filter(i => i.day >= 1 && i.day <= 31);
+  if (!valid.length) return null;
+  const base = parseD(day);
+  const starts = new Map();
+  for (let off = -2; off <= 2; off++) {
+    const y = new Date(base.getFullYear(), base.getMonth() + off, 1);
+    const yy = y.getFullYear(), mm = y.getMonth() + 1;
+    for (const inc of valid) {
+      const s = ymd(yy, mm, Math.min(inc.day, dim(yy, mm)));
+      if (!starts.has(s)) starts.set(s, []);
+      starts.get(s).push(inc);
+    }
+  }
+  const list = [...starts.keys()].sort();
+  let idx = -1;
+  for (let i = 0; i < list.length; i++) if (list[i] <= day) idx = i;
+  const start = list[idx], next = list[idx + 1];
+  const end = addDays(next, -1);
+  return { key: start, start, end, incomes: starts.get(start), length: diffDays(start, end) + 1 };
+}
+
+function periodBudget(p, settings) {
+  const ids = new Set(p.incomes.map(i => i.id));
+  const income = p.incomes.reduce((s, i) => s + (+i.amount || 0), 0);
+  const fixed = (settings.fixed || []).filter(f => ids.has(f.incomeId)).reduce((s, f) => s + (+f.amount || 0), 0);
+  const save = p.incomes.reduce((s, i) => s + (+i.save || 0), 0);
+  return { income, fixed, save, spendable: income - fixed - save };
+}
+
+function allExpenses(months) {
+  const out = [];
+  for (const k in months) for (const e of (months[k].items || [])) out.push(e);
+  return out;
+}
+const sum = (arr, f = x => x) => arr.reduce((s, x) => s + (+f(x) || 0), 0);
+const spentBetween = (exps, a, b) => sum(exps.filter(e => e.date >= a && e.date <= b), e => e.amount);
+
+function periodStatus(today, settings, months) {
+  const p = periodAt(today, settings.incomes);
+  if (!p) return null;
+  const b = periodBudget(p, settings);
+  const exps = allExpenses(months);
+  const spent = spentBetween(exps, p.start, p.end);
+  const left = b.spendable - spent;
+  const daysLeft = diffDays(today, p.end) + 1;
+  const perDay = left > 0 ? left / daysLeft : 0;
+  const elapsed = p.length - daysLeft + 1;
+  const ideal = b.spendable * elapsed / p.length;   // cât ar fi „normal” să fi cheltuit până la finalul zilei de azi
+  let state = "good";
+  if (left < 0) state = "crit";
+  else if (spent > ideal * 1.1) state = "warn";
+  return { p, b, spent, left, daysLeft, perDay, state };
+}
+
+/* Rata lunară la un credit cu anuități egale */
+function annuity(principal, ratePct, months) {
+  const r = ratePct / 1200;
+  if (months <= 0) return 0;
+  if (r === 0) return principal / months;
+  return principal * r / (1 - Math.pow(1 + r, -months));
+}
+/* Simulare cu plată în plus lunară (reducerea perioadei) */
+function simulate(principal, ratePct, months, extra) {
+  const r = ratePct / 1200, pay = annuity(principal, ratePct, months);
+  let b = principal, m = 0, interest = 0;
+  while (b > 0.01 && m < 1200) { const i = b * r; interest += i; b = b + i - pay - extra; m++; }
+  return { months: m, interest, pay };
+}
+</script>
+
+<script>
+/* ---------- Stare și salvare ---------- */
+const DEFAULTS = () => ({
+  incomes: [
+    { id: "i1", name: "Lichidare salariu", amount: 3000, day: 1, save: 300 },
+    { id: "i2", name: "Avans salariu", amount: 2000, day: 15, save: 300 }
+  ],
+  fixed: [
+    { id: "f1", name: "Chirie sau rată", amount: 1500, incomeId: "i1" },
+    { id: "f2", name: "Utilități", amount: 400, incomeId: "i1" },
+    { id: "f3", name: "Telefon și internet", amount: 120, incomeId: "i2" }
+  ],
+  categories: [
+    { id: "c1", name: "Mâncare", limit: 0 },
+    { id: "c2", name: "Oraș și livrări", limit: 350 },
+    { id: "c3", name: "Ieșiri", limit: 0 },
+    { id: "c4", name: "Transport", limit: 0 },
+    { id: "c5", name: "Haine", limit: 0 },
+    { id: "c6", name: "Altele", limit: 0 }
+  ],
+  goals: [
+    { id: "g1", name: "Rezervă pentru o lună", target: 5000 },
+    { id: "g2", name: "Rezervă pentru 3 luni", target: 15000 },
+    { id: "g3", name: "Rezervă pentru 6 luni", target: 30000 }
+  ],
+  credit: { principal: 200000, years: 25, rate: 7, extra: 0 },
+  startedAt: fmtD(new Date())
+});
+
+const S = { settings: null, savings: { entries: [] }, periods: {}, months: {} };
+let mode = "loading", col = null, tab = "azi", selCat = null, histMonth = null, draft = null, dirtyDraft = false;
+const queues = {};
+const LS = "chenzina_v1"; /* cheia rămâne la fel ca datele salvate să nu se piardă */
+const today = () => fmtD(new Date());
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const nf = new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 });
+const lei = n => nf.format(Math.round(n)) + " lei";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const MONTHS = ["ianuarie","februarie","martie","aprilie","mai","iunie","iulie","august","septembrie","octombrie","noiembrie","decembrie"];
+const niceDate = s => { const d = parseD(s); return `${d.getDate()} ${MONTHS[d.getMonth()]}`; };
+
+function setSync() {
+  const el = document.getElementById("sync");
+  if (mode === "db") { el.textContent = "Salvat în cont"; el.className = "sync"; }
+  else if (mode === "local") { el.textContent = "Doar pe acest dispozitiv"; el.className = "sync local"; }
+  else { el.textContent = "Se încarcă…"; el.className = "sync local"; }
+}
+
+function persistLocal() {
+  try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) { /* stocare indisponibilă */ }
+}
+
+function save(key, value) {
+  if (key === "settings") S.settings = value;
+  else if (key === "savings") S.savings = value;
+  else if (key === "periods") S.periods = value;
+  else S.months[key] = value;
+  render();
+  if (mode === "db" && col) {
+    const body = clone(value);
+    queues[key] = (queues[key] || Promise.resolve()).then(() => col.doc(key).set(body)).catch(err => {
+      if (err && err.code === "quota_exceeded") toast("Spațiul de date e plin. Șterge cheltuieli vechi.");
+      else toast("Nu am putut salva. Verifică internetul și încearcă din nou.");
+    });
+  } else persistLocal();
+}
+
+function loadLocal() {
+  mode = "local";
+  try {
+    const raw = localStorage.getItem(LS);
+    if (raw) Object.assign(S, JSON.parse(raw));
+  } catch (e) { /* fără stocare: aplicația merge, dar nu ține minte */ }
+  setSync(); render();
+}
+
+async function init() {
+  setSync(); render();
+  if (!window.claude || typeof window.claude.use !== "function") return loadLocal();
+  let db = null, user = null, id = null;
+  try {
+    [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+    id = user ? await user.id() : null;
+  } catch (e) { db = null; }
+  if (!db || !id) return loadLocal();
+  col = db.collection("data/users/" + id);
+  const timer = setTimeout(() => { if (mode === "loading") { toast("Datele nu se pot încărca încă. Folosesc copia de pe acest dispozitiv."); loadLocal(); col = null; } }, 10000);
+  col.onSnapshot(snap => {
+    if (!col) return;
+    if (!snap.metadata.fromCache) clearTimeout(timer);
+    const months = {};
+    let settings = null, savings = { entries: [] }, periods = {};
+    for (const d of snap.docs) {
+      const v = clone(d.data() || {});
+      if (d.id === "settings") settings = v;
+      else if (d.id === "savings") savings = v;
+      else if (d.id === "periods") periods = v;
+      else if (d.id.startsWith("m_")) months[d.id] = v;
+    }
+    S.settings = settings; S.savings = savings; S.periods = periods; S.months = months;
+    mode = "db"; setSync();
+    if (tab === "setari" && dirtyDraft) return;
+    if (tab === "credit" && document.activeElement && document.activeElement.closest("#view")) return;
+    render();
+  }, err => {
+    clearTimeout(timer);
+    if (mode === "loading") { col = null; loadLocal(); }
+    else toast("Legătura cu datele s-a întrerupt. Reîncarcă pagina mai târziu.");
+  });
+}
+
+/* ---------- Mici utilitare UI ---------- */
+let toastTimer = null;
+function toast(msg, action) {
+  const el = document.getElementById("toast");
+  el.innerHTML = `<span>${esc(msg)}</span>` + (action ? `<button id="toastAct">${esc(action.label)}</button>` : "");
+  el.classList.remove("hidden");
+  if (action) document.getElementById("toastAct").onclick = () => { action.fn(); el.classList.add("hidden"); };
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add("hidden"), action ? 6000 : 3500);
+}
+const barHtml = (frac, cls = "") => `<div class="bar ${cls}"><i style="width:${Math.max(0, Math.min(100, frac * 100)).toFixed(1)}%"></i></div>`;
+const incomeName = id => (S.settings.incomes.find(i => i.id === id) || {}).name || "—";
+
+/* ---------- Ecrane ---------- */
+function render() {
+  const v = document.getElementById("view");
+  const act = document.activeElement;
+  const keep = act && act.id && v.contains(act) ? { id: act.id, val: act.value } : null;
+  document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === tab ? "page" : "false"));
+  if (mode === "loading") { v.innerHTML = `<div class="card"><p class="muted">Se încarcă datele tale…</p></div>`; return; }
+  if (!S.settings) { tab = "setari"; document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === "setari" ? "page" : "false")); }
+  ({ azi: viewAzi, istoric: viewIstoric, economii: viewEconomii, credit: viewCredit, setari: viewSetari })[tab](v);
+  if (keep) { const el = document.getElementById(keep.id); if (el) { el.value = keep.val; el.focus(); } }
+}
+
+function viewAzi(v) {
+  const t = today(), st = periodStatus(t, S.settings, S.months);
+  if (!st) { v.innerHTML = `<div class="card"><p>Adaugă cel puțin un venit în Setări.</p></div>`; return; }
+  const { p, b, spent, left, daysLeft, perDay, state } = st;
+  const endLabel = niceDate(addDays(p.end, 1));
+  const stateTxt = { good: "Ești în grafic", warn: "Cheltui mai repede decât ar trebui", crit: `Ai depășit cu ${lei(-left)}` }[state];
+  const cats = S.settings.categories;
+  if (!selCat || !cats.find(c => c.id === selCat)) selCat = cats[0] && cats[0].id;
+
+  // Perioada trecută: ce a rămas sau cât s-a depășit
+  const prev = periodAt(addDays(p.start, -1), S.settings.incomes);
+  let banner = "";
+  if (prev && prev.start >= (S.settings.startedAt || "0000")) {
+    const pb = periodBudget(prev, S.settings);
+    const pl = pb.spendable - spentBetween(allExpenses(S.months), prev.start, prev.end);
+    const done = (S.periods[prev.key] || {}).restMoved;
+    if (pl > 0 && !done) banner = `<div class="banner good"><div><strong>Ți-au rămas ${lei(pl)} din perioada ${niceDate(prev.start)} – ${niceDate(prev.end)}.</strong><div class="muted">Regula: ce rămâne merge la economii.</div></div><div class="row"><button class="primary" id="moveRest" data-amt="${Math.round(pl)}" data-key="${prev.key}">Pune ${lei(pl)} la economii</button><button class="ghost" id="skipRest" data-key="${prev.key}">Nu acum</button></div></div>`;
+    else if (pl < 0 && !done) banner = `<div class="banner"><div><strong>Perioada trecută ai depășit bugetul cu ${lei(-pl)}.</strong><div class="muted">Nu lua bani din economii. Uită-te în Istoric unde s-au dus.</div></div><div class="row"><button class="ghost" id="skipRest" data-key="${prev.key}">Am înțeles</button></div></div>`;
+  }
+
+  // Ce trebuie făcut în ziua în care intră banii
+  const per = S.periods[p.key] || {};
+  const saved = S.savings.entries.filter(e => e.periodKey === p.key && e.kind === "auto");
+  const checks = [];
+  for (const inc of p.incomes) if (+inc.save > 0) {
+    const on = saved.some(e => e.incomeId === inc.id);
+    checks.push(`<label class="check"><input type="checkbox" id="sv_${inc.id}" data-save="${inc.id}" ${on ? "checked" : ""}> Am pus ${lei(inc.save)} din „${esc(inc.name)}” la economii</label>`);
+  }
+  const ids = new Set(p.incomes.map(i => i.id));
+  for (const f of S.settings.fixed.filter(f => ids.has(f.incomeId))) {
+    const on = (per.paid || {})[f.id];
+    checks.push(`<label class="check"><input type="checkbox" id="pd_${f.id}" data-paid="${f.id}" ${on ? "checked" : ""}> Am plătit ${esc(f.name)} (${lei(f.amount)})</label>`);
+  }
+
+  // Limite lunare pe categorii
+  const mStart = t.slice(0, 8) + "01", mEnd = t.slice(0, 8) + pad(dim(+t.slice(0, 4), +t.slice(5, 7)));
+  const exps = allExpenses(S.months);
+  const limits = cats.filter(c => +c.limit > 0).map(c => {
+    const s = sum(exps.filter(e => e.cat === c.id && e.date >= mStart && e.date <= mEnd), e => e.amount);
+    const fr = s / c.limit, cls = fr >= 1 ? "crit" : fr >= .8 ? "warn" : "";
+    return `<div class="stack" style="gap:6px"><div class="row"><span>${esc(c.name)}</span><span class="num muted">${lei(s)} din ${lei(c.limit)}</span></div>${barHtml(fr, cls)}${fr >= 1 ? `<span class="muted">Ai atins limita pe luna asta.</span>` : ""}</div>`;
+  }).join("");
+
+  const recent = exps.filter(e => e.date >= p.start && e.date <= p.end).sort((a, b) => (b.date + b.created).localeCompare(a.date + a.created)).slice(0, 5);
+
+  v.innerHTML = `
+  ${banner}
+  <section class="card hero" aria-label="Cât poți cheltui azi">
+    <span class="label">Azi poți cheltui</span>
+    <span class="big num">${lei(perDay)}</span>
+    <span class="sub num">${left >= 0 ? `Mai ai ${lei(left)} pentru ${daysLeft} ${daysLeft === 1 ? "zi" : "zile"}, până pe ${endLabel}` : `Bugetul perioadei s-a terminat. Următorii bani intră pe ${endLabel}.`}</span>
+    ${barHtml(b.spendable > 0 ? spent / b.spendable : 1)}
+    <div class="row"><span class="sub num">Cheltuit ${lei(spent)} din ${lei(b.spendable)}</span><span class="pill ${state}" style="background:rgba(255,255,255,.92)">${stateTxt}</span></div>
+  </section>
+
+  <section class="card" aria-label="Adaugă o cheltuială">
+    <h2>Adaugă o cheltuială</h2>
+    <input id="amt" class="amount num" inputmode="decimal" placeholder="0 lei" aria-label="Suma în lei">
+    <div class="chips" role="group" aria-label="Categoria">${cats.map(c => `<button class="chip" data-cat="${c.id}" aria-pressed="${c.id === selCat}">${esc(c.name)}</button>`).join("")}</div>
+    <div class="grid2">
+      <label for="note">Notă (opțional)<input id="note" placeholder="ex. pizza"></label>
+      <label for="edate">Data<input id="edate" type="date" value="${t}" max="${t}"></label>
+    </div>
+    <button class="primary" id="addExp">Adaugă</button>
+    <span class="muted">Cheltuielile fixe sunt deja scăzute din buget. Aici notezi doar restul.</span>
+  </section>
+
+  ${checks.length ? `<section class="card"><h2>De făcut perioada asta</h2>${checks.join("")}</section>` : ""}
+  ${limits ? `<section class="card"><h2>Limite pe luna asta</h2>${limits}</section>` : ""}
+
+  <section class="card">
+    <div class="row"><h2>Perioada ${niceDate(p.start)} – ${niceDate(p.end)}</h2></div>
+    <table class="num"><tbody>
+      <tr><td>Intră</td><td class="r">${lei(b.income)}</td></tr>
+      <tr><td>Cheltuieli fixe</td><td class="r">− ${lei(b.fixed)}</td></tr>
+      ${b.save > 0 ? `<tr><td>La economii</td><td class="r">− ${lei(b.save)}</td></tr>` : ""}
+      <tr><td><strong>De cheltuit</strong></td><td class="r"><strong>${lei(b.spendable)}</strong></td></tr>
+    </tbody></table>
+    ${recent.length ? `<div class="list">${recent.map(itemHtml).join("")}</div>` : `<p class="muted">Nicio cheltuială în perioada asta.</p>`}
+  </section>`;
+
+  v.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { selCat = b.dataset.cat; v.querySelectorAll("[data-cat]").forEach(x => x.setAttribute("aria-pressed", x.dataset.cat === selCat)); });
+  document.getElementById("addExp").onclick = addExpense;
+  document.getElementById("amt").onkeydown = e => { if (e.key === "Enter") addExpense(); };
+  v.querySelectorAll("[data-save]").forEach(c => c.onchange = () => toggleAutoSave(p.key, c.dataset.save, c.checked));
+  v.querySelectorAll("[data-paid]").forEach(c => c.onchange = () => { const per = clone(S.periods); per[p.key] = per[p.key] || {}; per[p.key].paid = per[p.key].paid || {}; per[p.key].paid[c.dataset.paid] = c.checked; save("periods", per); });
+  const mr = document.getElementById("moveRest");
+  if (mr) mr.onclick = () => { addSaving(+mr.dataset.amt, "Rest din perioada trecută", "rest", mr.dataset.key); markRest(mr.dataset.key, true); toast("Baronul Rață aprobă. Încă un ou de aur în cuib."); };
+  const sk = document.getElementById("skipRest");
+  if (sk) sk.onclick = () => markRest(sk.dataset.key, "skip");
+  bindDeletes(v);
+}
+
+function itemHtml(e) {
+  const c = S.settings.categories.find(c => c.id === e.cat);
+  return `<div class="item"><div class="what"><span>${esc(c ? c.name : "Altele")}</span><span>${esc(e.note || niceDate(e.date))}</span></div><div class="row"><span class="num">${lei(e.amount)}</span><button class="ghost small danger" data-del="${e.id}" data-date="${e.date}" aria-label="Șterge">Șterge</button></div></div>`;
+}
+
+function bindDeletes(v) {
+  v.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    const key = monthKey(b.dataset.date), m = clone(S.months[key] || { items: [] });
+    const gone = m.items.find(x => x.id === b.dataset.del);
+    m.items = m.items.filter(x => x.id !== b.dataset.del);
+    save(key, m);
+    toast("Cheltuială ștearsă.", { label: "Anulează", fn: () => { const mm = clone(S.months[key] || { items: [] }); mm.items.push(gone); save(key, mm); } });
+  });
+}
+
+function addExpense() {
+  const raw = document.getElementById("amt").value.replace(",", ".").replace(/[^\d.]/g, "");
+  const amount = parseFloat(raw);
+  if (!(amount > 0)) { toast("Scrie o sumă mai mare ca zero."); document.getElementById("amt").focus(); return; }
+  const date = document.getElementById("edate").value || today();
+  const e = { id: uid(), amount: Math.round(amount * 100) / 100, cat: selCat, note: document.getElementById("note").value.trim().slice(0, 80), date, created: new Date().toISOString() };
+  const key = monthKey(date), m = clone(S.months[key] || { items: [] });
+  m.items.push(e);
+  document.getElementById("amt").value = ""; document.getElementById("note").value = "";
+  save(key, m);
+  toast(`Am adăugat ${lei(e.amount)}.`);
+  const cat = S.settings.categories.find(c => c.id === e.cat);
+  if (cat && +cat.limit > 0) {
+    const mS = date.slice(0, 8) + "01", mE = date.slice(0, 8) + "31";
+    const s = sum(allExpenses(S.months).filter(x => x.cat === cat.id && x.date >= mS && x.date <= mE), x => x.amount);
+    if (s >= cat.limit) toast(`Atenție: ai ajuns la ${lei(s)} la „${cat.name}”, peste limita de ${lei(cat.limit)}.`);
+    else if (s >= cat.limit * .8) toast(`Ai folosit ${Math.round(s / cat.limit * 100)}% din limita pentru „${cat.name}”.`);
+  }
+}
+
+function addSaving(amount, note, kind, periodKey, incomeId) {
+  const sv = clone(S.savings); sv.entries = sv.entries || [];
+  sv.entries.push({ id: uid(), amount, note, kind, periodKey: periodKey || null, incomeId: incomeId || null, date: today() });
+  save("savings", sv);
+}
+function toggleAutoSave(pk, incomeId, on) {
+  const inc = S.settings.incomes.find(i => i.id === incomeId);
+  if (on) { addSaving(+inc.save, `Economii din „${inc.name}”`, "auto", pk, incomeId); toast(`Baronul Rață e mândru de tine: ai pus ${lei(inc.save)} deoparte.`); }
+  else { const sv = clone(S.savings); sv.entries = sv.entries.filter(e => !(e.kind === "auto" && e.periodKey === pk && e.incomeId === incomeId)); save("savings", sv); }
+}
+function markRest(key, val) { const per = clone(S.periods); per[key] = per[key] || {}; per[key].restMoved = val; save("periods", per); }
+
+function viewIstoric(v) {
+  if (!histMonth) histMonth = today().slice(0, 7);
+  const [y, m] = histMonth.split("-").map(Number);
+  const items = ((S.months["m_" + histMonth] || {}).items || []).slice().sort((a, b) => (b.date + b.created).localeCompare(a.date + a.created));
+  const total = sum(items, e => e.amount);
+  const byCat = S.settings.categories.map(c => ({ c, s: sum(items.filter(e => e.cat === c.id), e => e.amount) })).filter(x => x.s > 0).sort((a, b) => b.s - a.s);
+  const max = byCat.length ? byCat[0].s : 1;
+  let lastDay = "", rows = "";
+  for (const e of items) { if (e.date !== lastDay) { rows += `<div class="day">${niceDate(e.date)}</div>`; lastDay = e.date; } rows += itemHtml(e); }
+  v.innerHTML = `
+  <section class="card">
+    <div class="row"><button class="small" id="mPrev" aria-label="Luna trecută">‹</button><h2>${MONTHS[m - 1]} ${y}</h2><button class="small" id="mNext" aria-label="Luna următoare">›</button></div>
+    <div class="row"><span class="muted">Total cheltuieli notate</span><strong class="num">${lei(total)}</strong></div>
+  </section>
+  ${byCat.length ? `<section class="card"><h2>Pe ce s-au dus</h2>${byCat.map(x => `<div class="stack" style="gap:6px"><div class="row"><span>${esc(x.c.name)}</span><span class="num muted">${lei(x.s)} · ${Math.round(x.s / total * 100)}%</span></div>${barHtml(x.s / max)}</div>`).join("")}</section>` : ""}
+  <section class="card"><h2>Toate cheltuielile</h2>${items.length ? `<div class="list">${rows}</div>` : `<p class="muted">Nicio cheltuială notată în luna asta.</p>`}</section>`;
+  const shift = d => { const dt = new Date(y, m - 1 + d, 1); histMonth = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}`; render(); };
+  document.getElementById("mPrev").onclick = () => shift(-1);
+  document.getElementById("mNext").onclick = () => shift(1);
+  bindDeletes(v);
+}
+
+function viewEconomii(v) {
+  const entries = (S.savings.entries || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+  const total = sum(entries, e => e.amount);
+  const monthly = sum(S.settings.incomes, i => i.amount) * (S.settings.incomes.length ? 1 : 0) - sum(S.settings.incomes, i => i.save);
+  const monthsCovered = monthly > 0 ? total / monthly : 0;
+  const goals = (S.settings.goals || []).slice().sort((a, b) => a.target - b.target);
+  const nextGoal = goals.find(g => total < g.target);
+  const perMonth = sum(S.settings.incomes, i => i.save);
+  v.innerHTML = `
+  <section class="card hero">
+    <span class="label">Ai pus deoparte</span>
+    <span class="big num">${lei(total)}</span>
+    <span class="sub">Ajung pentru aproximativ ${monthsCovered.toFixed(1).replace(".", ",")} luni de cheltuieli.</span>
+  </section>
+  <section class="card"><h2>Obiective</h2>
+    ${goals.length ? goals.map(g => { const fr = total / g.target; return `<div class="stack" style="gap:6px"><div class="row"><span>${esc(g.name)}</span>${fr >= 1 ? `<span class="pill good">Atins</span>` : `<span class="num muted">${lei(total)} / ${lei(g.target)}</span>`}</div>${barHtml(fr)}</div>`; }).join("") : `<p class="muted">Adaugă obiective în Setări.</p>`}
+    ${nextGoal && perMonth > 0 ? `<span class="muted">Cu ${lei(perMonth)} pe lună ajungi la „${esc(nextGoal.name)}” în ~${Math.ceil((nextGoal.target - total) / perMonth)} luni.</span>` : ""}
+  </section>
+  <section class="card"><h2>Adaugă sau scoate bani</h2>
+    <div class="grid2"><label for="svAmt">Suma<input id="svAmt" inputmode="decimal" placeholder="ex. 200"></label><label for="svNote">Motiv<input id="svNote" placeholder="ex. cadou de ziua mea"></label></div>
+    <div class="grid2"><button class="primary" id="svAdd">Pune deoparte</button><button id="svTake">Scot pentru o urgență</button></div>
+  </section>
+  <section class="card"><h2>Istoric economii</h2>
+    ${entries.length ? `<div class="list">${entries.map(e => `<div class="item"><div class="what"><span>${esc(e.note || "Economii")}</span><span>${niceDate(e.date)}</span></div><div class="row"><span class="num" style="color:${e.amount < 0 ? "var(--crit)" : "var(--good)"}">${e.amount < 0 ? "−" : "+"}${lei(Math.abs(e.amount))}</span><button class="ghost small danger" data-sdel="${e.id}">Șterge</button></div></div>`).join("")}</div>` : `<p class="muted">Încă nimic. Bifează pe ecranul Azi când muți banii.</p>`}
+  </section>`;
+  const read = () => parseFloat((document.getElementById("svAmt").value || "").replace(",", "."));
+  document.getElementById("svAdd").onclick = () => { const a = read(); if (!(a > 0)) return toast("Scrie o sumă mai mare ca zero."); addSaving(a, document.getElementById("svNote").value.trim() || "Pus deoparte", "manual"); };
+  document.getElementById("svTake").onclick = () => { const a = read(); if (!(a > 0)) return toast("Scrie o sumă mai mare ca zero."); addSaving(-a, document.getElementById("svNote").value.trim() || "Urgență", "manual"); };
+  v.querySelectorAll("[data-sdel]").forEach(b => b.onclick = () => { const sv = clone(S.savings); sv.entries = sv.entries.filter(e => e.id !== b.dataset.sdel); save("savings", sv); });
+}
+
+function viewCredit(v) {
+  const c = Object.assign({ principal: 0, years: 0, rate: 0, extra: 0 }, S.settings.credit || {});
+  const n = Math.round(c.years * 12);
+  const pay = annuity(c.principal, c.rate, n);
+  const base = simulate(c.principal, c.rate, n, 0), withX = simulate(c.principal, c.rate, n, +c.extra || 0);
+  const rows = [-2, -1, 0, 1, 2].map(d => c.rate + d).filter(r => r > 0).map(r => `<tr${r === c.rate ? ` style="font-weight:600"` : ""}><td>${String(r).replace(".", ",")}%${r === c.rate ? " (acum)" : ""}</td><td class="r">${lei(annuity(c.principal, r, n))}</td></tr>`).join("");
+  v.innerHTML = `
+  <section class="card"><h2>Creditul tău</h2>
+    <div class="grid2">
+      <label for="cP">Cât mai ai de plătit (lei)<input id="cP" inputmode="decimal" value="${c.principal}"></label>
+      <label for="cY">Câți ani mai are<input id="cY" inputmode="decimal" value="${c.years}"></label>
+      <label for="cR">Dobânda totală (%)<input id="cR" inputmode="decimal" value="${c.rate}"></label>
+      <label for="cX">Plată în plus pe lună (lei)<input id="cX" inputmode="decimal" value="${c.extra}"></label>
+    </div>
+  </section>
+  <section class="card hero"><span class="label">Rata lunară estimată</span><span class="big num">${lei(pay)}</span><span class="sub">La o dobândă variabilă (IRCC + marja băncii), rata se poate schimba la fiecare 3 luni.</span></section>
+  <section class="card"><h2>Dacă se schimbă dobânda</h2><table class="num"><thead><tr><th>Dobândă</th><th class="r">Rata</th></tr></thead><tbody>${rows}</tbody></table></section>
+  <section class="card"><h2>Dacă plătești în plus</h2>
+    ${+c.extra > 0 ? `<p>Cu ${lei(c.extra)} în plus pe lună, termini creditul în <strong>${(withX.months / 12).toFixed(1).replace(".", ",")} ani</strong> în loc de ${(base.months / 12).toFixed(1).replace(".", ",")} și plătești cu <strong>${lei(base.interest - withX.interest)}</strong> mai puțină dobândă.</p>` : `<p class="muted">Scrie o sumă la „Plată în plus pe lună” ca să vezi cât câștigi.</p>`}
+    <span class="muted">Calcul estimativ, cu dobândă constantă. Verifică în contract dacă banca cere comision pentru rambursare anticipată.</span>
+  </section>`;
+  let t = null;
+  ["cP", "cY", "cR", "cX"].forEach(id => document.getElementById(id).oninput = () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const num = x => parseFloat((document.getElementById(x).value || "0").replace(",", ".")) || 0;
+      const s = clone(S.settings); s.credit = { principal: num("cP"), years: num("cY"), rate: num("cR"), extra: num("cX") };
+      save("settings", s);
+    }, 700);
+  });
+}
+
+function viewSetari(v) {
+  if (!draft || !dirtyDraft) draft = clone(S.settings || DEFAULTS());
+  const first = !S.settings;
+  const incOpts = sel => draft.incomes.map(i => `<option value="${i.id}" ${i.id === sel ? "selected" : ""}>${esc(i.name || "Venit")}</option>`).join("");
+  v.innerHTML = `
+  ${first ? `<div class="banner good"><div><strong>Bun venit! Sunt Baronul Rață.</strong><div class="muted">Spune-mi când și câți bani îți intră, ce plătești fix și cât vrei să pui deoparte. Am completat un exemplu; schimbă-l cu cifrele tale.</div></div></div>` : ""}
+  <section class="card"><h2>Venituri</h2><span class="muted">Fiecare venit începe o perioadă nouă în ziua în care intră.</span>
+    ${draft.incomes.map((i, k) => `<div class="edit-row">
+      <label for="in_n_${k}">Nume<input id="in_n_${k}" data-f="incomes.${k}.name" value="${esc(i.name)}"></label>
+      <div class="cols"><label for="in_a_${k}">Sumă (lei)<input id="in_a_${k}" data-f="incomes.${k}.amount" data-num inputmode="decimal" value="${i.amount}"></label>
+      <label for="in_d_${k}">Ziua din lună<input id="in_d_${k}" data-f="incomes.${k}.day" data-num inputmode="numeric" value="${i.day}"></label></div>
+      <label for="in_s_${k}">Din el pun deoparte (lei)<input id="in_s_${k}" data-f="incomes.${k}.save" data-num inputmode="decimal" value="${i.save}"></label>
+      <button class="ghost small danger" data-rm="incomes.${k}">Șterge venitul</button></div>`).join("")}
+    <button class="small" data-add="incomes">+ Adaugă un venit</button>
+  </section>
+  <section class="card"><h2>Cheltuieli fixe</h2><span class="muted">Se scad automat din banii perioadei în care le plătești.</span>
+    ${draft.fixed.map((f, k) => `<div class="edit-row">
+      <label for="fx_n_${k}">Nume<input id="fx_n_${k}" data-f="fixed.${k}.name" value="${esc(f.name)}"></label>
+      <div class="cols"><label for="fx_a_${k}">Sumă (lei)<input id="fx_a_${k}" data-f="fixed.${k}.amount" data-num inputmode="decimal" value="${f.amount}"></label>
+      <label for="fx_i_${k}">Plătită din<select id="fx_i_${k}" data-f="fixed.${k}.incomeId">${incOpts(f.incomeId)}</select></label></div>
+      <button class="ghost small danger" data-rm="fixed.${k}">Șterge</button></div>`).join("")}
+    <button class="small" data-add="fixed">+ Adaugă o cheltuială fixă</button>
+  </section>
+  <section class="card"><h2>Categorii și limite</h2><span class="muted">Limita e pe lună. Pune 0 dacă nu vrei limită.</span>
+    ${draft.categories.map((c, k) => `<div class="edit-row"><div class="cols">
+      <label for="ct_n_${k}">Categorie<input id="ct_n_${k}" data-f="categories.${k}.name" value="${esc(c.name)}"></label>
+      <label for="ct_l_${k}">Limită pe lună (lei)<input id="ct_l_${k}" data-f="categories.${k}.limit" data-num inputmode="decimal" value="${c.limit}"></label></div>
+      <button class="ghost small danger" data-rm="categories.${k}">Șterge</button></div>`).join("")}
+    <button class="small" data-add="categories">+ Adaugă o categorie</button>
+  </section>
+  <section class="card"><h2>Obiective de economii</h2>
+    ${draft.goals.map((g, k) => `<div class="edit-row"><div class="cols">
+      <label for="gl_n_${k}">Obiectiv<input id="gl_n_${k}" data-f="goals.${k}.name" value="${esc(g.name)}"></label>
+      <label for="gl_t_${k}">Țintă (lei)<input id="gl_t_${k}" data-f="goals.${k}.target" data-num inputmode="decimal" value="${g.target}"></label></div>
+      <button class="ghost small danger" data-rm="goals.${k}">Șterge</button></div>`).join("")}
+    <button class="small" data-add="goals">+ Adaugă un obiectiv</button>
+  </section>
+  <button class="primary" id="saveSet">${first ? "Salvează și începe" : "Salvează setările"}</button>
+  ${first ? "" : `<section class="card"><h2>Copie de siguranță</h2>
+    <span class="muted">Copiază datele ca text și păstrează-le undeva sigur. Le poți lipi înapoi mai jos.</span>
+    <button class="small" id="copyData">Copiază datele</button>
+    <label for="impData">Lipește aici o copie<textarea id="impData" placeholder='{"settings": …}'></textarea></label>
+    <button class="small" id="impBtn">Încarcă datele din copie</button>
+  </section>`}
+  <p class="muted">${mode === "db" ? "Datele se salvează în contul tău și le vezi pe orice dispozitiv pe care deschizi aplicația." : "Datele se salvează doar în acest browser. Folosește „Copiază datele” ca să nu le pierzi."}</p>`;
+
+  v.querySelectorAll("[data-f]").forEach(el => {
+    const ev = el.tagName === "SELECT" ? "onchange" : "oninput";
+    el[ev] = () => {
+      const [arr, k, f] = el.dataset.f.split(".");
+      let val = el.value;
+      if (el.hasAttribute("data-num")) val = parseFloat(String(val).replace(",", ".")) || 0;
+      if (f === "day") val = Math.max(1, Math.min(31, Math.round(val) || 1));
+      draft[arr][+k][f] = val; dirtyDraft = true;
+    };
+  });
+  v.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => {
+    const [arr, k] = b.dataset.rm.split(".");
+    if (arr === "incomes" && draft.incomes.length === 1) return toast("Ai nevoie de cel puțin un venit.");
+    if (arr === "categories" && draft.categories.length === 1) return toast("Ai nevoie de cel puțin o categorie.");
+    const removed = draft[arr].splice(+k, 1)[0];
+    if (arr === "incomes") draft.fixed.forEach(f => { if (f.incomeId === removed.id) f.incomeId = draft.incomes[0].id; });
+    dirtyDraft = true; render();
+  });
+  v.querySelectorAll("[data-add]").forEach(b => b.onclick = () => {
+    const arr = b.dataset.add, id = uid();
+    const blank = { incomes: { id, name: "Venit nou", amount: 0, day: 1, save: 0 }, fixed: { id, name: "Cheltuială nouă", amount: 0, incomeId: draft.incomes[0].id }, categories: { id, name: "Categorie nouă", limit: 0 }, goals: { id, name: "Obiectiv nou", target: 1000 } }[arr];
+    draft[arr].push(blank); dirtyDraft = true; render();
+  });
+  document.getElementById("saveSet").onclick = () => {
+    const s = clone(draft);
+    s.startedAt = s.startedAt || today();
+    dirtyDraft = false; draft = null; tab = "azi";
+    save("settings", s);
+    toast("Setările sunt salvate.");
+  };
+  const cp = document.getElementById("copyData");
+  if (cp) cp.onclick = async () => {
+    try { await navigator.clipboard.writeText(JSON.stringify({ settings: S.settings, savings: S.savings, periods: S.periods, months: S.months })); toast("Datele sunt copiate. Lipește-le într-o notiță."); }
+    catch (e) { document.getElementById("impData").value = JSON.stringify({ settings: S.settings, savings: S.savings, periods: S.periods, months: S.months }); toast("Nu am putut copia automat. Am pus datele în căsuța de mai jos."); }
+  };
+  const ib = document.getElementById("impBtn");
+  if (ib) ib.onclick = () => {
+    let d;
+    try { d = JSON.parse(document.getElementById("impData").value); } catch (e) { return toast("Textul lipit nu e o copie validă."); }
+    if (!d || !d.settings || !Array.isArray(d.settings.incomes)) return toast("În copie lipsesc setările.");
+    save("settings", d.settings); save("savings", d.savings || { entries: [] }); save("periods", d.periods || {});
+    for (const k in (d.months || {})) if (/^m_\d{4}-\d{2}$/.test(k)) save(k, d.months[k]);
+    toast("Datele au fost încărcate.");
+  };
+}
+
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  if (!S.settings && b.dataset.tab !== "setari") return toast("Salvează întâi setările.");
+  if (tab === "setari" && dirtyDraft && b.dataset.tab !== "setari") toast("Ai modificări nesalvate în Setări.");
+  tab = b.dataset.tab; render(); window.scrollTo(0, 0);
+});
+init();
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
