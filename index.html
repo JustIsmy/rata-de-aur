@@ -178,12 +178,13 @@ function periodAt(day, incomes) {
   return { key: start, start, end, incomes: starts.get(start), length: diffDays(start, end) + 1 };
 }
 
-function periodBudget(p, settings) {
+function periodBudget(p, settings, extras) {
   const ids = new Set(p.incomes.map(i => i.id));
+  const extra = sum(((extras && extras.items) || []).filter(x => x.date >= p.start && x.date <= p.end), x => x.spend);
   const income = p.incomes.reduce((s, i) => s + (+i.amount || 0), 0);
   const fixed = (settings.fixed || []).filter(f => ids.has(f.incomeId)).reduce((s, f) => s + (+f.amount || 0), 0);
   const save = p.incomes.reduce((s, i) => s + (+i.save || 0), 0);
-  return { income, fixed, save, spendable: income - fixed - save };
+  return { income, fixed, save, extra, spendable: income - fixed - save + extra };
 }
 
 function allExpenses(months) {
@@ -194,10 +195,10 @@ function allExpenses(months) {
 const sum = (arr, f = x => x) => arr.reduce((s, x) => s + (+f(x) || 0), 0);
 const spentBetween = (exps, a, b) => sum(exps.filter(e => e.date >= a && e.date <= b), e => e.amount);
 
-function periodStatus(today, settings, months) {
+function periodStatus(today, settings, months, extras) {
   const p = periodAt(today, settings.incomes);
   if (!p) return null;
-  const b = periodBudget(p, settings);
+  const b = periodBudget(p, settings, extras);
   const exps = allExpenses(months);
   const spent = spentBetween(exps, p.start, p.end);
   const left = b.spendable - spent;
@@ -253,10 +254,11 @@ const DEFAULTS = () => ({
     { id: "g3", name: "Rezervă pentru 6 luni", target: 30000 }
   ],
   credit: { principal: 200000, years: 25, rate: 7, extra: 0 },
+  extraSavePct: 50,
   startedAt: fmtD(new Date())
 });
 
-const S = { settings: null, savings: { entries: [] }, periods: {}, months: {} };
+const S = { settings: null, savings: { entries: [] }, periods: {}, months: {}, extras: { items: [] } };
 let mode = "loading", col = null, tab = "azi", selCat = null, histMonth = null, draft = null, dirtyDraft = false;
 const queues = {};
 const LS = "chenzina_v1"; /* cheia rămâne la fel ca datele salvate să nu se piardă */
@@ -284,6 +286,7 @@ function save(key, value) {
   if (key === "settings") S.settings = value;
   else if (key === "savings") S.savings = value;
   else if (key === "periods") S.periods = value;
+  else if (key === "extras") S.extras = value;
   else S.months[key] = value;
   render();
   if (mode === "db" && col) {
@@ -319,15 +322,16 @@ async function init() {
     if (!col) return;
     if (!snap.metadata.fromCache) clearTimeout(timer);
     const months = {};
-    let settings = null, savings = { entries: [] }, periods = {};
+    let settings = null, savings = { entries: [] }, periods = {}, extras = { items: [] };
     for (const d of snap.docs) {
       const v = clone(d.data() || {});
       if (d.id === "settings") settings = v;
       else if (d.id === "savings") savings = v;
       else if (d.id === "periods") periods = v;
+      else if (d.id === "extras") extras = v;
       else if (d.id.startsWith("m_")) months[d.id] = v;
     }
-    S.settings = settings; S.savings = savings; S.periods = periods; S.months = months;
+    S.settings = settings; S.savings = savings; S.periods = periods; S.months = months; S.extras = extras;
     mode = "db"; setSync();
     if (tab === "setari" && dirtyDraft) return;
     if (tab === "credit" && document.activeElement && document.activeElement.closest("#view")) return;
@@ -365,7 +369,7 @@ function render() {
 }
 
 function viewAzi(v) {
-  const t = today(), st = periodStatus(t, S.settings, S.months);
+  const t = today(), st = periodStatus(t, S.settings, S.months, S.extras);
   if (!st) { v.innerHTML = `<div class="card"><p>Adaugă cel puțin un venit în Setări.</p></div>`; return; }
   const { p, b, spent, left, daysLeft, perDay, state } = st;
   const endLabel = niceDate(addDays(p.end, 1));
@@ -377,7 +381,7 @@ function viewAzi(v) {
   const prev = periodAt(addDays(p.start, -1), S.settings.incomes);
   let banner = "";
   if (prev && prev.start >= (S.settings.startedAt || "0000")) {
-    const pb = periodBudget(prev, S.settings);
+    const pb = periodBudget(prev, S.settings, S.extras);
     const pl = pb.spendable - spentBetween(allExpenses(S.months), prev.start, prev.end);
     const done = (S.periods[prev.key] || {}).restMoved;
     if (pl > 0 && !done) banner = `<div class="banner good"><div><strong>Ți-au rămas ${lei(pl)} din perioada ${niceDate(prev.start)} – ${niceDate(prev.end)}.</strong><div class="muted">Regula: ce rămâne merge la economii.</div></div><div class="row"><button class="primary" id="moveRest" data-amt="${Math.round(pl)}" data-key="${prev.key}">Pune ${lei(pl)} la economii</button><button class="ghost" id="skipRest" data-key="${prev.key}">Nu acum</button></div></div>`;
@@ -431,6 +435,18 @@ function viewAzi(v) {
     <span class="muted">Cheltuielile fixe sunt deja scăzute din buget. Aici notezi doar restul.</span>
   </section>
 
+  <section class="card" aria-label="Bani în plus">
+    <div class="row"><h2>Am primit bani în plus</h2><button class="small" id="xToggle" aria-expanded="false">Adaugă</button></div>
+    <div id="xForm" class="stack hidden">
+      <div class="grid2">
+        <label for="xAmt">Suma (lei)<input id="xAmt" inputmode="decimal" placeholder="ex. 200"></label>
+        <label for="xNote">De unde<input id="xNote" placeholder="ex. cadou de ziua mea"></label>
+      </div>
+      <span class="muted num" id="xPrev">Scrie suma ca să vezi cum se împarte.</span>
+      <button class="primary" id="xAdd">Adaugă banii</button>
+    </div>
+  </section>
+
   ${checks.length ? `<section class="card"><h2>De făcut perioada asta</h2>${checks.join("")}</section>` : ""}
   ${limits ? `<section class="card"><h2>Limite pe luna asta</h2>${limits}</section>` : ""}
 
@@ -438,6 +454,7 @@ function viewAzi(v) {
     <div class="row"><h2>Perioada ${niceDate(p.start)} – ${niceDate(p.end)}</h2></div>
     <table class="num"><tbody>
       <tr><td>Intră</td><td class="r">${lei(b.income)}</td></tr>
+      ${b.extra > 0 ? `<tr><td>Bani în plus</td><td class="r">+ ${lei(b.extra)}</td></tr>` : ""}
       <tr><td>Cheltuieli fixe</td><td class="r">− ${lei(b.fixed)}</td></tr>
       ${b.save > 0 ? `<tr><td>La economii</td><td class="r">− ${lei(b.save)}</td></tr>` : ""}
       <tr><td><strong>De cheltuit</strong></td><td class="r"><strong>${lei(b.spendable)}</strong></td></tr>
@@ -454,6 +471,24 @@ function viewAzi(v) {
   if (mr) mr.onclick = () => { addSaving(+mr.dataset.amt, "Rest din perioada trecută", "rest", mr.dataset.key); markRest(mr.dataset.key, true); toast("Baronul Rață aprobă. Încă un ou de aur în cuib."); };
   const sk = document.getElementById("skipRest");
   if (sk) sk.onclick = () => markRest(sk.dataset.key, "skip");
+  const pct = () => { const p = S.settings.extraSavePct; return p === undefined || p === null || isNaN(+p) ? 50 : Math.max(0, Math.min(100, +p)); };
+  const xAmt = document.getElementById("xAmt"), xPrev = document.getElementById("xPrev");
+  const readX = () => parseFloat((xAmt.value || "").replace(",", "."));
+  document.getElementById("xToggle").onclick = e => { const f = document.getElementById("xForm"); f.classList.toggle("hidden"); e.target.setAttribute("aria-expanded", !f.classList.contains("hidden")); if (!f.classList.contains("hidden")) xAmt.focus(); };
+  xAmt.oninput = () => { const a = readX(); if (!(a > 0)) { xPrev.textContent = "Scrie suma ca să vezi cum se împarte."; return; } const s = Math.round(a * pct()) / 100; xPrev.textContent = `${lei(s)} merg la economii, ${lei(a - s)} se adaugă la banii de cheltuit până pe ${endLabel}.`; };
+  document.getElementById("xAdd").onclick = () => {
+    const a = readX();
+    if (!(a > 0)) { toast("Scrie o sumă mai mare ca zero."); xAmt.focus(); return; }
+    const toSave = Math.round(a * pct()) / 100, spend = Math.round((a - toSave) * 100) / 100;
+    const note = (document.getElementById("xNote").value.trim() || "Bani în plus").slice(0, 80);
+    const id = uid();
+    const ex = clone(S.extras || { items: [] }); ex.items = ex.items || [];
+    ex.items.push({ id, amount: a, toSave, spend, note, date: t });
+    xAmt.value = ""; document.getElementById("xNote").value = "";
+    save("extras", ex);
+    if (toSave > 0) { const sv = clone(S.savings); sv.entries = sv.entries || []; sv.entries.push({ id: uid(), amount: toSave, note: `${note} (${pct()}% la economii)`, kind: "extra", extraId: id, periodKey: p.key, date: t }); save("savings", sv); }
+    toast(`Baronul Rață aprobă: ${lei(toSave)} la economii, ${lei(spend)} pentru tine.`);
+  };
   bindDeletes(v);
 }
 
@@ -507,6 +542,7 @@ function markRest(key, val) { const per = clone(S.periods); per[key] = per[key] 
 function viewIstoric(v) {
   if (!histMonth) histMonth = today().slice(0, 7);
   const [y, m] = histMonth.split("-").map(Number);
+  const monthExtras = ((S.extras || {}).items || []).filter(x => x.date.slice(0, 7) === histMonth).sort((a, b) => b.date.localeCompare(a.date));
   const items = ((S.months["m_" + histMonth] || {}).items || []).slice().sort((a, b) => (b.date + b.created).localeCompare(a.date + a.created));
   const total = sum(items, e => e.amount);
   const byCat = S.settings.categories.map(c => ({ c, s: sum(items.filter(e => e.cat === c.id), e => e.amount) })).filter(x => x.s > 0).sort((a, b) => b.s - a.s);
@@ -519,10 +555,17 @@ function viewIstoric(v) {
     <div class="row"><span class="muted">Total cheltuieli notate</span><strong class="num">${lei(total)}</strong></div>
   </section>
   ${byCat.length ? `<section class="card"><h2>Pe ce s-au dus</h2>${byCat.map(x => `<div class="stack" style="gap:6px"><div class="row"><span>${esc(x.c.name)}</span><span class="num muted">${lei(x.s)} · ${Math.round(x.s / total * 100)}%</span></div>${barHtml(x.s / max)}</div>`).join("")}</section>` : ""}
+  ${monthExtras.length ? `<section class="card"><h2>Bani în plus</h2><div class="list">${monthExtras.map(x => `<div class="item"><div class="what"><span>${esc(x.note)}</span><span>${niceDate(x.date)} · ${lei(x.toSave)} la economii, ${lei(x.spend)} de cheltuit</span></div><div class="row"><span class="num" style="color:var(--good)">+${lei(x.amount)}</span><button class="ghost small danger" data-xdel="${x.id}">Șterge</button></div></div>`).join("")}</div></section>` : ""}
   <section class="card"><h2>Toate cheltuielile</h2>${items.length ? `<div class="list">${rows}</div>` : `<p class="muted">Nicio cheltuială notată în luna asta.</p>`}</section>`;
   const shift = d => { const dt = new Date(y, m - 1 + d, 1); histMonth = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}`; render(); };
   document.getElementById("mPrev").onclick = () => shift(-1);
   document.getElementById("mNext").onclick = () => shift(1);
+  v.querySelectorAll("[data-xdel]").forEach(b => b.onclick = () => {
+    const id = b.dataset.xdel;
+    const ex = clone(S.extras); ex.items = ex.items.filter(x => x.id !== id); save("extras", ex);
+    const sv = clone(S.savings); const before = sv.entries.length; sv.entries = sv.entries.filter(e => e.extraId !== id); if (sv.entries.length !== before) save("savings", sv);
+    toast("Am șters banii în plus și partea lor din economii.");
+  });
   bindDeletes(v);
 }
 
@@ -619,6 +662,9 @@ function viewSetari(v) {
       <button class="ghost small danger" data-rm="categories.${k}">Șterge</button></div>`).join("")}
     <button class="small" data-add="categories">+ Adaugă o categorie</button>
   </section>
+  <section class="card"><h2>Bani în plus</h2><span class="muted">Când primești bani neașteptați (cadouri, bonusuri), cât la sută merge automat la economii.</span>
+    <label for="xPct">Procent pus deoparte (%)<input id="xPct" data-f="root.0.extraSavePct" data-num inputmode="numeric" value="${draft.extraSavePct ?? 50}"></label>
+  </section>
   <section class="card"><h2>Obiective de economii</h2>
     ${draft.goals.map((g, k) => `<div class="edit-row"><div class="cols">
       <label for="gl_n_${k}">Obiectiv<input id="gl_n_${k}" data-f="goals.${k}.name" value="${esc(g.name)}"></label>
@@ -642,6 +688,7 @@ function viewSetari(v) {
       let val = el.value;
       if (el.hasAttribute("data-num")) val = parseFloat(String(val).replace(",", ".")) || 0;
       if (f === "day") val = Math.max(1, Math.min(31, Math.round(val) || 1));
+      if (arr === "root") { draft[f] = Math.max(0, Math.min(100, Math.round(val))); dirtyDraft = true; return; }
       draft[arr][+k][f] = val; dirtyDraft = true;
     };
   });
@@ -667,15 +714,15 @@ function viewSetari(v) {
   };
   const cp = document.getElementById("copyData");
   if (cp) cp.onclick = async () => {
-    try { await navigator.clipboard.writeText(JSON.stringify({ settings: S.settings, savings: S.savings, periods: S.periods, months: S.months })); toast("Datele sunt copiate. Lipește-le într-o notiță."); }
-    catch (e) { document.getElementById("impData").value = JSON.stringify({ settings: S.settings, savings: S.savings, periods: S.periods, months: S.months }); toast("Nu am putut copia automat. Am pus datele în căsuța de mai jos."); }
+    try { await navigator.clipboard.writeText(JSON.stringify({ settings: S.settings, savings: S.savings, periods: S.periods, months: S.months, extras: S.extras })); toast("Datele sunt copiate. Lipește-le într-o notiță."); }
+    catch (e) { document.getElementById("impData").value = JSON.stringify({ settings: S.settings, savings: S.savings, periods: S.periods, months: S.months, extras: S.extras }); toast("Nu am putut copia automat. Am pus datele în căsuța de mai jos."); }
   };
   const ib = document.getElementById("impBtn");
   if (ib) ib.onclick = () => {
     let d;
     try { d = JSON.parse(document.getElementById("impData").value); } catch (e) { return toast("Textul lipit nu e o copie validă."); }
     if (!d || !d.settings || !Array.isArray(d.settings.incomes)) return toast("În copie lipsesc setările.");
-    save("settings", d.settings); save("savings", d.savings || { entries: [] }); save("periods", d.periods || {});
+    save("settings", d.settings); save("savings", d.savings || { entries: [] }); save("periods", d.periods || {}); save("extras", d.extras || { items: [] });
     for (const k in (d.months || {})) if (/^m_\d{4}-\d{2}$/.test(k)) save(k, d.months[k]);
     toast("Datele au fost încărcate.");
   };
